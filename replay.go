@@ -34,9 +34,108 @@ var options []func(*stomp.Conn) error = []func(*stomp.Conn) error{
     stomp.ConnOpt.Host("/"),
 }
 
+/*
+    Implementation specific
+*/
+/*
+type Location struct {
+    latitude float64 ",omitempty"
+
+    longitude float64 ",omitempty"
+
+    numberOfSatellite int ",omitempty"
+
+    hdop float32 ",omitempty"
+
+    poiReference string ",omitempty"
+}
+
+type Movement struct {
+    speed float32 ",omitempty"
+
+    direction float32 ",omitempty"
+
+}
+type Journey struct {
+    gpsDistance float32 ",omitempty"
+
+    canDistance float32 ",omitempty"
+
+    gpsOrCanDistance float32 ",omitempty"
+
+    fuelUsed float32 ",omitempty"
+
+}
+type AssetInformation struct {
+    odometer float32 ",omitempty"
+
+    fuelLevel float32 ",omitempty"
+
+    totalFuelUsed float32 ",omitempty"
+
+    batteryLevel float32 ",omitempty"
+
+    kmsToService float32 ",omitempty"
+
+    daysToService float32 ",omitempty"
+
+}
+
+type Frame struct {
+    assetId string
+    assetType string ",omitempty"
+
+    deviceId string ",omitempty"
+
+    imei string ",omitempty"
+
+    esn int64 ",omitempty"
+
+    simId string ",omitempty"
+
+    legacyId string ",omitempty"
+
+    clientId string
+
+    driverId string ",omitempty"
+
+    driverKey string ",omitempty"
+
+    driverType string ",omitempty"
+
+    driverSource string ",omitempty"
+
+    privacy bool ",omitempty"
+
+    obuGenerationDate string ",omitempty"
+
+    gatewayReceptionDate string ",omitempty"
+
+    obuSequenceId int64 ",omitempty"
+
+    gatewaySequenceId int64 ",omitempty"
+
+    index int ",omitempty"
+
+    eventCategory int ",omitempty"
+
+    eventCode int ",omitempty"
+
+    location Location ",omitempty"
+
+    movement Movement ",omitempty"
+
+    journey []Journey ",omitempty"
+
+    assetInformation AssetInformation ",omitempty"
+
+}
+*/
+type Frame interface{}
+
 type FrameFromAmq struct {
     Ordinal int
-    Frame interface{}
+    Frame
 }
 
 func help() {
@@ -60,7 +159,6 @@ func main() {
    } else {
         help()
     }
-    // wait until we know the receiver has subscribed
 }
 
 func sendMessages() {
@@ -87,6 +185,8 @@ func sendMessages() {
     
     for iter.Next(&result) {
 
+//        log.Print("raw: ", result.Frame)
+
         json, err2 := bson.MarshalJSON(result.Frame)
         if err2 != nil {
             log.Fatal(err2)
@@ -103,17 +203,6 @@ func sendMessages() {
         log.Fatal(err)
     }
 
-/*
-    for i := 1; i <= *messageCount; i++ {
-        text := fmt.Sprintf("Message #%d", i)
-        err = conn.Send(*queueName, "text/plain",
-            []byte(text), nil)
-        if err != nil {
-            println("failed to send to server", err)
-            return
-        }
-    }
-*/
     conn.Disconnect()
     log.Print("sender finished")
 }
@@ -149,15 +238,13 @@ func recvMessages() {
 
         correctedBytes := regexpFix.ReplaceAllLiteral(actualBytes, []byte("\":"))
 
-        var bdoc interface{}
+        var bdoc Frame
         err = bson.UnmarshalJSON(correctedBytes, &bdoc)
         if err != nil {
             log.Fatal(err)
         }
 
         err = c.Insert(&FrameFromAmq{i, bdoc})
-
-//        log.Print("Message: ", actualText)
 
     }
 
